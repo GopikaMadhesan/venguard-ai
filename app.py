@@ -1,9 +1,16 @@
 from flask import Flask, render_template, request, redirect, session
-import mysql.connector
 import os
 import bcrypt
 
 from werkzeug.utils import secure_filename
+import sqlite3
+
+conn = sqlite3.connect(
+    'vendor_portal.db',
+    check_same_thread=False
+)
+
+cursor = conn.cursor()
 
 # ==========================================
 # FLASK APP
@@ -17,14 +24,9 @@ app.secret_key = "vendor_secret_key"
 # DATABASE CONNECTION
 # ==========================================
 
-db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="Gops@0510",
-    database="vendor_portal"
-)
 
-cursor = db.cursor()
+
+cursor = conn.cursor()
 
 # ==========================================
 # FILE UPLOAD CONFIGURATION
@@ -94,7 +96,7 @@ def register():
 
             cursor.execute(sql, values)
 
-            db.commit()
+            conn.commit()
 
             return redirect('/login')
 
@@ -280,7 +282,7 @@ def add_vendor():
 
         cursor.execute(sql, values)
 
-        db.commit()
+        conn.commit()
 
         vendor_id = cursor.lastrowid
 
@@ -305,7 +307,7 @@ def add_vendor():
 
             cursor.execute(doc_sql, doc_values)
 
-            db.commit()
+            conn.commit()
 
         return redirect('/vendors')
 
@@ -370,7 +372,7 @@ def delete_vendor(id):
 
     cursor.execute(sql, values)
 
-    db.commit()
+    conn.commit()
 
     return redirect('/vendors')
 

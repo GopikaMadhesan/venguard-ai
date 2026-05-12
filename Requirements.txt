@@ -1,1 +1,5 @@
-Flaskmysql-connector-pythonWerkzeugFlask-LoginFlask-Bcryptgunicorn
+Flask
+Werkzeug
+Flask-Login
+Flask-Bcrypt
+gunicorn
