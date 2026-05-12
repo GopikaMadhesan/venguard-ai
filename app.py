@@ -1,16 +1,8 @@
 from flask import Flask, render_template, request, redirect, session
 import os
 import bcrypt
-
 from werkzeug.utils import secure_filename
 import sqlite3
-
-conn = sqlite3.connect(
-    'vendor_portal.db',
-    check_same_thread=False
-)
-
-cursor = conn.cursor()
 
 # ==========================================
 # FLASK APP
@@ -24,9 +16,47 @@ app.secret_key = "vendor_secret_key"
 # DATABASE CONNECTION
 # ==========================================
 
-
+conn = sqlite3.connect(
+    'vendor_portal.db',
+    check_same_thread=False
+)
 
 cursor = conn.cursor()
+
+# ==========================================
+# CREATE TABLES
+# ==========================================
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    email TEXT UNIQUE,
+    password TEXT,
+    role TEXT
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS vendors (
+    vendor_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    company_name TEXT,
+    service_type TEXT,
+    risk_level TEXT,
+    status TEXT
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vendor_id INTEGER,
+    document_name TEXT,
+    file_path TEXT
+)
+""")
+
+conn.commit()
 
 # ==========================================
 # FILE UPLOAD CONFIGURATION
@@ -52,7 +82,6 @@ def home():
 # ==========================================
 
 @app.route('/register', methods=['GET', 'POST'])
-
 def register():
 
     message = ""
@@ -60,11 +89,8 @@ def register():
     if request.method == 'POST':
 
         name = request.form['name']
-
         email = request.form['email']
-
         password = request.form['password']
-
         role = request.form['role']
 
         # ==================================
@@ -82,7 +108,7 @@ def register():
             INSERT INTO users
             (name, email, password, role)
 
-            VALUES (%s, %s, %s, %s)
+            VALUES (?, ?, ?, ?)
             """
 
             values = (
@@ -98,9 +124,9 @@ def register():
 
             return redirect('/login')
 
-        except:
+        except Exception as e:
 
-            message = "Email already exists"
+            message = f"Error: {e}"
 
     return render_template(
         'register.html',
@@ -112,7 +138,6 @@ def register():
 # ==========================================
 
 @app.route('/login', methods=['GET', 'POST'])
-
 def login():
 
     message = ""
@@ -120,7 +145,6 @@ def login():
     if request.method == 'POST':
 
         email = request.form['email']
-
         password = request.form['password']
 
         # ==================================
@@ -129,7 +153,7 @@ def login():
 
         sql = """
         SELECT * FROM users
-        WHERE email=%s
+        WHERE email=?
         """
 
         values = (email,)
@@ -144,7 +168,7 @@ def login():
 
         if user:
 
-            stored_password = user[3]
+            stored_password = str(user[3])
 
             if bcrypt.checkpw(
                 password.encode('utf-8'),
@@ -152,7 +176,6 @@ def login():
             ):
 
                 session['name'] = user[1]
-
                 session['role'] = user[4]
 
                 return redirect('/dashboard')
@@ -175,15 +198,12 @@ def login():
 # ==========================================
 
 @app.route('/dashboard')
-
 def dashboard():
 
     if 'name' not in session:
-
         return redirect('/login')
 
     cursor.execute("SELECT COUNT(*) FROM vendors")
-
     total_vendors = cursor.fetchone()[0]
 
     cursor.execute("""
@@ -191,7 +211,6 @@ def dashboard():
     FROM vendors
     WHERE risk_level='High'
     """)
-
     high_risk = cursor.fetchone()[0]
 
     cursor.execute("""
@@ -199,7 +218,6 @@ def dashboard():
     FROM vendors
     WHERE risk_level='Medium'
     """)
-
     medium_risk = cursor.fetchone()[0]
 
     cursor.execute("""
@@ -207,7 +225,6 @@ def dashboard():
     FROM vendors
     WHERE risk_level='Low'
     """)
-
     low_risk = cursor.fetchone()[0]
 
     return render_template(
@@ -224,21 +241,16 @@ def dashboard():
 # ==========================================
 
 @app.route('/add_vendor', methods=['GET', 'POST'])
-
 def add_vendor():
 
     if 'name' not in session:
-
         return redirect('/login')
 
     if request.method == 'POST':
 
         company_name = request.form['company_name']
-
         service_type = request.form['service_type']
-
         risk_level = request.form['risk_level']
-
         status = request.form['status']
 
         # ==================================
@@ -268,7 +280,7 @@ def add_vendor():
         INSERT INTO vendors
         (company_name, service_type, risk_level, status)
 
-        VALUES (%s, %s, %s, %s)
+        VALUES (?, ?, ?, ?)
         """
 
         values = (
@@ -294,7 +306,7 @@ def add_vendor():
             INSERT INTO documents
             (vendor_id, document_name, file_path)
 
-            VALUES (%s, %s, %s)
+            VALUES (?, ?, ?)
             """
 
             doc_values = (
@@ -316,11 +328,9 @@ def add_vendor():
 # ==========================================
 
 @app.route('/vendors')
-
 def vendors():
 
     if 'name' not in session:
-
         return redirect('/login')
 
     cursor.execute("SELECT * FROM vendors")
@@ -337,11 +347,9 @@ def vendors():
 # ==========================================
 
 @app.route('/documents')
-
 def documents():
 
     if 'name' not in session:
-
         return redirect('/login')
 
     cursor.execute("SELECT * FROM documents")
@@ -358,12 +366,11 @@ def documents():
 # ==========================================
 
 @app.route('/delete_vendor/<int:id>')
-
 def delete_vendor(id):
 
     sql = """
     DELETE FROM vendors
-    WHERE vendor_id=%s
+    WHERE vendor_id=?
     """
 
     values = (id,)
@@ -379,7 +386,6 @@ def delete_vendor(id):
 # ==========================================
 
 @app.route('/logout')
-
 def logout():
 
     session.clear()
@@ -391,4 +397,8 @@ def logout():
 # ==========================================
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=10000)
+    app.run(
+        debug=True,
+        host="0.0.0.0",
+        port=10000
+    )
