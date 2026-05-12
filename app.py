@@ -44,9 +44,7 @@ if not os.path.exists(UPLOAD_FOLDER):
 # ==========================================
 
 @app.route('/')
-
 def home():
-
     return render_template('index.html')
 
 # ==========================================
